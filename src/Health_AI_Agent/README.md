@@ -68,7 +68,7 @@ This slows down decision making.
 - Scalable Data Discovery
   : The platform can operate across thousands of enterprise tables.
 
-Governance and Compliance
+- Governance and Compliance
 
 Policy-aware retrieval ensures data usage follows governance rules.
 
@@ -197,5 +197,6 @@ Outputs:
   Dashboards
   Alerts
   Care management triggers
+
 
 
