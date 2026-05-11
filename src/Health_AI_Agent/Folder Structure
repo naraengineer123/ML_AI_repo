@@ -1,25 +1,25 @@
 Health_AI_Agent/
 │
 ├─ app/
-│   ├─ main.py
-│   └─ config.py
+│   ├─ main.py              # FastAPI health and query endpoints
+│   └─ config.py            # Environment/config values for API, DB, and embedding jobs
 │
 ├─ agents/
-│   ├─ orchestrator.py
-│   ├─ sql_agent.py
-│   ├─ rag_agent.py
-│   ├─ qa_agent.py
-│   ├─ analyst_agent.py
-│   └─ report_agent.py
+│   ├─ orchestrator.py      # Coordinates RAG, SQL, QA, analysis, and reporting
+│   ├─ sql_agent.py         # Generates BigQuery SQL from natural language
+│   ├─ rag_agent.py         # Retrieves context using embeddings/vector search
+│   ├─ qa_agent.py          # Validates generated SQL safety
+│   ├─ analyst_agent.py     # Summarizes query result data
+│   └─ report_agent.py      # Generates stakeholder-facing reports
 │
 ├─ db/
-│   ├─ bigquery_client.py
-│   └─ pgvector_client.py
+│   ├─ bigquery_client.py   # Executes BigQuery SQL
+│   └─ pgvector_client.py   # Retrieves vector context from Postgres/pgvector
 │
 ├─ ingestion/
-│   ├─ ingest_docs.py
-│   ├─ chunking.py
-│   └─ embed_store.py
+│   ├─ ingest_docs.py       # BigQuery source → 256-d embedding → BigQuery destination worker
+│   ├─ chunking.py          # Batch and 500-shard worker partition helpers
+│   └─ embed_store.py       # Flash Attention-capable Clinical Transformer embedder
 │
 ├─ requirements.txt
 ├─ Dockerfile

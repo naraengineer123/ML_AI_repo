@@ -3,8 +3,12 @@ uvicorn
 openai
 psycopg2-binary
 google-cloud-bigquery
+google-cloud-bigquery-storage
 langchain
 tiktoken
 pydantic
 python-dotenv
 pgvector
+torch
+transformers
+accelerate

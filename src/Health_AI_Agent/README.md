@@ -199,4 +199,44 @@ Outputs:
   Care management triggers
 
 
+## Distributed Clinical Embedding Pipeline
+
+The ingestion package includes a BigQuery-to-BigQuery embedding worker for the
+50M-record clinical embedding job.
+
+Target design:
+
+- Source records: 50,000,000
+- GCP workers: 500 `n1-standard-16` instances
+- Records per worker: 100,000
+- Batch size: 2,000
+- Model: Flash Attention-enabled Clinical Transformer
+- Output vector size: 256 dimensions
+- Destination: BigQuery table with `ARRAY<FLOAT64>` embeddings
+
+Configure each worker with environment variables:
+
+```bash
+export BQ_SOURCE_TABLE="project.dataset.source_table"
+export BQ_DEST_TABLE="project.dataset.clinical_embeddings"
+export BQ_ID_COLUMN="member_id"
+export BQ_TEXT_COLUMNS="diagnosis_text,clinical_notes"
+export EMBEDDING_MODEL_NAME="emilyalsentzer/Bio_ClinicalBERT"
+export EMBEDDING_TOTAL_SHARDS=500
+export EMBEDDING_RECORDS_PER_INSTANCE=100000
+export EMBEDDING_BATCH_SIZE=2000
+export EMBEDDING_DIMENSION=256
+```
+
+Run one worker shard:
+
+```bash
+python -m ingestion.ingest_docs --shard-index 0
+```
+
+Launch shards `0` through `499` across the 500 GCP instances. Each worker uses
+a deterministic `FARM_FINGERPRINT` shard filter so records are split by source
+id and appended to the destination BigQuery table.
+
+
 
