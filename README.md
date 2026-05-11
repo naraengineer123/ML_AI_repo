@@ -10,7 +10,9 @@ The goal is to provide a scalable, governed, and production-oriented AI system t
 
 ## Business Problem
 
-Large healthcare enterprises often manage thousands of tables across cloud data warehouses. Care managers and business users need answers quickly, but the data landscape usually requires:
+Care managers need to identify members who have similar health-related issues, such as diabetes risk, chronic disease indicators, hospitalization risk, medication gaps, and other high-risk clinical patterns. These members are often spread across many claims, clinical, lab, pharmacy, and care-management tables, making it difficult to quickly find the right population for outreach or intervention.
+
+Large healthcare enterprises often manage thousands of tables across cloud data warehouses. Finding members with similar conditions or risk profiles usually requires:
 
 - Strong SQL knowledge
 - Understanding of complex healthcare schemas
@@ -18,9 +20,9 @@ Large healthcare enterprises often manage thousands of tables across cloud data 
 - Manual data validation
 - Analyst or data engineer support
 
-This creates delays in decision-making and limits direct access to actionable insights.
+This creates delays in identifying at-risk members, prioritizing care-management outreach, and acting on emerging population health trends.
 
-This platform solves that problem by converting natural language questions into governed, validated, and explainable data workflows.
+This platform solves that problem by allowing users to ask natural language questions such as "find members similar to diabetic high-risk patients" or "show members with elevated health risk," then converting those questions into governed, validated, and explainable data workflows.
 
 ## Solution Summary
 
