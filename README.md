@@ -1,45 +1,56 @@
 # Enterprise AI Data Agent
 
-## AI Architect / Engineer Project Overview
+This repository is organized into two architecture sections:
 
-I designed and implemented this project as an enterprise-grade AI data agent platform for healthcare care-management teams. The platform enables care managers, analysts, and business users to ask natural language questions over large-scale enterprise healthcare data without manually writing SQL or searching across fragmented data dictionaries, policy documents, and clinical datasets.
+1. **Enterprise AI Data Agent**
+2. **MLOps Architecture**
 
-The architecture combines multi-agent orchestration, Retrieval Augmented Generation (RAG), transformer-based clinical embeddings, BigQuery analytics, pgvector retrieval, and an MLOps-ready model training pipeline.
+The project demonstrates an AI Architect / Engineer implementation of a healthcare-focused enterprise data agent. It combines multi-agent orchestration, Retrieval Augmented Generation (RAG), semantic chunking, transformer-based clinical embeddings, BigQuery-scale data processing, pgvector semantic retrieval, and an MLOps model lifecycle.
 
-The goal is to provide a scalable, governed, and production-oriented AI system that can support healthcare use cases such as risk stratification, chronic condition identification, hospitalization risk review, and care outreach prioritization.
+## 1. Enterprise AI Data Agent
 
-## Business Problem
+### AI Architect / Engineer Overview
 
-Care managers need to identify members who have similar health-related issues, such as diabetes risk, chronic disease indicators, hospitalization risk, medication gaps, and other high-risk clinical patterns. These members are often spread across many claims, clinical, lab, pharmacy, and care-management tables, making it difficult to quickly find the right population for outreach or intervention.
+I designed this platform as an enterprise-grade AI data agent for healthcare care-management teams. The agent helps care managers, analysts, and business users ask natural language questions over large-scale healthcare data without manually writing SQL or searching across fragmented claims, clinical, lab, pharmacy, policy, and care-management datasets.
 
-Large healthcare enterprises often manage thousands of tables across cloud data warehouses. Finding members with similar conditions or risk profiles usually requires:
+The agent is designed to identify members with similar health-related issues such as diabetes risk, chronic disease indicators, hospitalization risk, medication gaps, and other high-risk clinical patterns. The system converts those natural language questions into governed, validated, explainable data workflows.
 
-- Strong SQL knowledge
-- Understanding of complex healthcare schemas
-- Awareness of data governance policies
-- Manual data validation
-- Analyst or data engineer support
+Example questions:
 
-This creates delays in identifying at-risk members, prioritizing care-management outreach, and acting on emerging population health trends.
+- Find members similar to diabetic high-risk patients.
+- Show members with elevated health risk.
+- Which members have diabetes risk and should be prioritized for outreach?
+- Identify members with multiple chronic conditions.
+- Which members have hospitalization risk greater than 0.7?
 
-This platform solves that problem by allowing users to ask natural language questions such as "find members similar to diabetic high-risk patients" or "show members with elevated health risk," then converting those questions into governed, validated, and explainable data workflows.
+### Business Problem
 
-## Solution Summary
+Care managers need to identify at-risk members quickly, but member data is often spread across many enterprise tables and documentation sources. Finding the right population for outreach usually requires:
 
-The system provides an AI-powered care-manager assistant that can:
+- SQL expertise
+- Knowledge of complex healthcare schemas
+- Understanding of clinical terminology
+- Awareness of governance and data-access policies
+- Manual validation by analysts or data engineers
 
-- Understand natural language healthcare questions
-- Retrieve relevant metadata, policies, and clinical context using RAG
-- Generate BigQuery SQL from user intent
-- Validate generated SQL before execution
-- Query enterprise data from BigQuery
-- Analyze returned results
-- Produce care-manager-ready summaries and recommendations
-- Support large-scale clinical embedding generation for 50M records
-- Store and retrieve embeddings using BigQuery and pgvector
-- Support model training, tuning, registration, and deployment through MLOps patterns
+This creates delays in care-management outreach, population health interventions, and operational decision-making.
 
-## High-Level Architecture
+### Solution Summary
+
+The Enterprise AI Data Agent provides:
+
+- Natural language access to enterprise healthcare data
+- RAG-based retrieval of metadata, clinical context, and governance rules
+- SQL generation for BigQuery
+- SQL safety validation before execution
+- BigQuery query execution
+- Result summarization and care-manager-facing reporting
+- Large-scale clinical embedding generation for 50M records
+- BigQuery embedding storage
+- pgvector semantic retrieval
+- Dynamic GCP worker scaling based on input data volume
+
+### Complete AI Agent Architecture
 
 ```text
 Care Manager / Business User
@@ -78,124 +89,37 @@ Agent Orchestrator
                 +--> Final Care Manager Response
 ```
 
-## Core AI Agent Architecture
+### Multi-Agent Components
 
-The AI agent is implemented as a multi-agent system. Each agent owns a specific responsibility, which keeps the architecture modular, testable, and easier to govern.
+| Agent | Responsibility |
+| --- | --- |
+| Orchestrator Agent | Coordinates the full request lifecycle across RAG, SQL, QA, BigQuery, analysis, and reporting. |
+| RAG Agent | Retrieves relevant schema, policy, metadata, and clinical context using embeddings and vector search. |
+| SQL Agent | Converts natural language questions into BigQuery Standard SQL. |
+| QA Agent | Blocks unsafe SQL and validates generated queries before execution. |
+| Analyst Agent | Converts raw query results into concise insights for care-management use cases. |
+| Report Agent | Generates business-facing summaries, recommendations, and risk interpretation. |
 
-### 1. Orchestrator Agent
-
-The orchestrator coordinates the full request lifecycle:
-
-- Accepts the user question
-- Calls the RAG layer for context
-- Sends context and question to the SQL agent
-- Validates the SQL output
-- Executes BigQuery queries
-- Passes results to the analyst agent
-- Generates the final report through the report agent
-
-Main file:
+Main files:
 
 ```text
 src/Health_AI_Agent/agents/orchestrator.py
-```
-
-### 2. RAG Agent
-
-The RAG agent retrieves supporting context before SQL generation and response generation.
-
-It is designed to retrieve:
-
-- Data dictionary context
-- Table and column metadata
-- Business definitions
-- Healthcare policy documents
-- Clinical documentation
-- Governance rules
-- Previously embedded clinical text
-
-Main file:
-
-```text
 src/Health_AI_Agent/agents/rag_agent.py
-```
-
-### 3. SQL Agent
-
-The SQL agent converts natural language into BigQuery Standard SQL.
-
-Design goals:
-
-- Generate only read-only `SELECT` queries
-- Avoid unsafe SQL operations
-- Use retrieved schema and policy context
-- Produce optimized BigQuery SQL
-- Limit large result sets where needed
-
-Main file:
-
-```text
 src/Health_AI_Agent/agents/sql_agent.py
-```
-
-### 4. QA Agent
-
-The QA agent validates generated SQL before execution.
-
-Validation responsibilities:
-
-- Block destructive SQL operations
-- Ensure the query is a `SELECT` query
-- Reduce hallucinated or unsafe query execution
-- Support future governance and compliance checks
-
-Main file:
-
-```text
 src/Health_AI_Agent/agents/qa_agent.py
-```
-
-### 5. Analyst Agent
-
-The analyst agent converts query results into concise insights.
-
-Responsibilities:
-
-- Summarize returned records
-- Identify result patterns
-- Prepare findings for report generation
-- Support care-management interpretation
-
-Main file:
-
-```text
 src/Health_AI_Agent/agents/analyst_agent.py
-```
-
-### 6. Report Agent
-
-The report agent creates the final business-facing response.
-
-Report output includes:
-
-- Summary of findings
-- Key insights
-- Business interpretation
-- Recommended actions
-- Potential risks
-
-Main file:
-
-```text
 src/Health_AI_Agent/agents/report_agent.py
 ```
 
-## RAG and Vector Search Architecture
+### RAG and Vector Search Architecture
 
-The platform uses a multi-RAG architecture to improve answer quality, SQL accuracy, and governance awareness.
+The platform uses a multi-RAG architecture to ground SQL generation and report generation in enterprise-specific context.
 
 ```text
 Enterprise Documents / Metadata / Clinical Text
+        |
+        v
+Semantic Chunking
         |
         v
 Clinical Transformer Embedding Pipeline
@@ -214,21 +138,19 @@ RAG Context Retrieval
 Agent Prompt Context
         |
         v
-SQL Generation + Report Generation
+SQL Generation + Analysis + Report Output
 ```
 
-### RAG Components
+RAG components:
 
 - BigQuery stores enterprise source data and final embedding outputs.
-- pgvector supports similarity search for policy, metadata, and contextual retrieval.
-- Clinical Transformer embeddings represent clinical text in vector form.
-- Retrieved context is injected into agent prompts to ground SQL and reporting.
+- pgvector supports vector similarity search for policy, metadata, and clinical context.
+- Clinical Transformer embeddings represent clinical text as semantic vectors.
+- Retrieved context is injected into agent prompts to improve SQL accuracy and reporting quality.
 
 ### Semantic Chunking Strategy
 
-The RAG ingestion pipeline uses semantic chunking instead of splitting documents by a fixed number of words or tokens.
-
-With semantic chunking, clinical notes are split when the topic changes. This keeps related sentences together and prevents unrelated medical concepts from being embedded into the same vector.
+The ingestion pipeline uses semantic chunking instead of splitting documents by a fixed number of words or tokens. Clinical notes are split when the topic changes, which keeps related sentences together and prevents unrelated concepts from being embedded into the same vector.
 
 Example source note:
 
@@ -265,13 +187,17 @@ for i in range(1, len(sentences)):
         current_chunk.append(sentences[i])
 ```
 
-This improves retrieval quality for care-management use cases because diabetes, medication adherence, cardiology, hospitalization risk, and other clinical topics can be retrieved as focused chunks instead of mixed-context passages.
+This improves retrieval quality because diabetes, medication adherence, cardiology, hospitalization risk, and other clinical topics can be retrieved as focused passages instead of mixed-context chunks.
 
-## Clinical Transformer Embedding Pipeline
+Main file:
 
-I added a distributed embedding pipeline that reads source records from BigQuery, generates clinical embeddings, and loads final embeddings back into BigQuery.
+```text
+src/Health_AI_Agent/ingestion/chunking.py
+```
 
-### Embedding Design
+### Clinical Transformer Embedding Pipeline
+
+The embedding pipeline reads source records from BigQuery, applies semantic chunking, generates clinical embeddings, and loads final embeddings back into BigQuery.
 
 | Area | Design |
 | --- | --- |
@@ -288,31 +214,11 @@ I added a distributed embedding pipeline that reads source records from BigQuery
 | Output destination | BigQuery embedding table |
 | Retrieval store | pgvector |
 
-### Dynamic Instance Scaling
-
-The embedding architecture dynamically determines how many `n1-standard-16` GCP instances to spin up based on the input data volume.
-
-Scaling formula:
-
-```text
-required_instances = ceil(total_input_records / records_per_instance)
-```
-
-For the 50M-record workload:
-
-```text
-50,000,000 records / 100,000 records per instance = 500 instances
-```
-
-If the source table grows or shrinks, the architecture adjusts the worker count accordingly. For example, 10M records require 100 instances, while 75M records require 750 instances at the same 100k-records-per-instance target.
-
-Each dynamically created worker receives a unique `shard_index`. For the 50M-record workload, shards run from `0` to `499`. The source table is split using a deterministic BigQuery `FARM_FINGERPRINT` shard filter, avoiding inefficient offset-based scans.
-
-### Embedding Worker Flow
+Worker flow:
 
 ```text
 Worker Shard
-  -> Read 100k records from BigQuery
+  -> Read records from BigQuery
   -> Apply semantic chunking by clinical topic
   -> Process records in batches of 2,000
   -> Tokenize clinical text
@@ -330,6 +236,32 @@ src/Health_AI_Agent/ingestion/embed_store.py
 src/Health_AI_Agent/ingestion/chunking.py
 ```
 
+### Dynamic GCP Instance Scaling
+
+The embedding architecture dynamically determines how many `n1-standard-16` GCP instances to spin up based on input data volume.
+
+Scaling formula:
+
+```text
+required_instances = ceil(total_input_records / records_per_instance)
+```
+
+For the 50M-record workload:
+
+```text
+50,000,000 records / 100,000 records per instance = 500 instances
+```
+
+Examples:
+
+| Input records | Records per instance | Required instances |
+| --- | ---: | ---: |
+| 10M | 100,000 | 100 |
+| 50M | 100,000 | 500 |
+| 75M | 100,000 | 750 |
+
+Each dynamically created worker receives a unique `shard_index`. For the 50M-record workload, shards run from `0` to `499`. The source table is split using a deterministic BigQuery `FARM_FINGERPRINT` shard filter, avoiding inefficient offset-based scans.
+
 ### Worker Configuration
 
 ```bash
@@ -344,16 +276,16 @@ export EMBEDDING_BATCH_SIZE=2000
 export EMBEDDING_DIMENSION=256
 ```
 
-Run one shard:
+Run one worker shard:
 
 ```bash
 cd src/Health_AI_Agent
 python -m ingestion.ingest_docs --shard-index 0
 ```
 
-For full-scale execution, launch shards `0` through `499` across 500 GCP instances.
+For full-scale execution, launch shard indexes `0` through `499` across the dynamically provisioned GCP workers.
 
-## BigQuery Data Architecture
+### BigQuery Data Architecture
 
 BigQuery is used for:
 
@@ -365,7 +297,7 @@ BigQuery is used for:
 
 The AI agent uses BigQuery as the system of record for structured enterprise analytics while pgvector supports semantic context retrieval.
 
-## pgvector Architecture
+### pgvector Architecture
 
 pgvector is used as the vector search layer for RAG context retrieval.
 
@@ -377,63 +309,7 @@ Use cases:
 - Retrieve data governance rules
 - Support semantic matching between user questions and enterprise knowledge
 
-This lets the AI agent generate better SQL and more reliable reports by grounding the model in enterprise-specific context.
-
-## MLOps Architecture
-
-The repository also includes an MLOps-ready machine learning pipeline for predictive modeling.
-
-The ML pipeline supports:
-
-- Data ingestion from CSV
-- Feature engineering
-- Train/test split
-- XGBoost model training
-- Hyperparameter tuning
-- Model serialization
-- Vertex AI model registration
-- Batch/local prediction
-
-### MLOps Lifecycle
-
-```text
-Data Source
-  -> Data Validation
-  -> Feature Engineering
-  -> Train/Test Split
-  -> Model Training
-  -> Hyperparameter Tuning
-  -> Model Evaluation
-  -> Model Serialization
-  -> Vertex AI Model Registry
-  -> Deployment / Batch Inference
-  -> Monitoring and Retraining
-```
-
-### Model Training Flow
-
-```text
-Raw Data
-  -> Feature Engineering
-  -> XGBoost Training
-  -> Grid Search Tuning
-  -> Accuracy Evaluation
-  -> Save Best Model
-  -> Register Model in Vertex AI
-```
-
-Main files:
-
-```text
-src/ML/data_preprocessing.py
-src/ML/feature_engineering.py
-src/ML/train_model.py
-src/ML/hyperparameter_tuning.py
-src/ML/register_vertex_model.py
-src/ML/predict.py
-```
-
-## Deployment Architecture
+### Deployment Architecture
 
 The care-manager AI agent is exposed as a FastAPI service.
 
@@ -452,7 +328,7 @@ Agent Orchestrator
         +--> Clinical Embedding Pipeline
 ```
 
-The service can be containerized with Docker and deployed to a cloud runtime such as Cloud Run, GKE, or a VM-based service environment.
+The service can be containerized with Docker and deployed to Cloud Run, GKE, or a VM-based service environment.
 
 Main service files:
 
@@ -462,7 +338,7 @@ src/Health_AI_Agent/app/config.py
 src/Health_AI_Agent/Dockerfile
 ```
 
-## API Usage
+### API Usage
 
 Run the API locally:
 
@@ -503,64 +379,134 @@ Example response fields:
 }
 ```
 
-## Repository Structure
+### Enterprise AI Data Agent Files
 
 ```text
-enterprise-ai-data-agent-main/
-├─ README.md
-├─ requirements.txt
-├─ config/
-│  └─ model_config.yaml
-├─ data/
-│  └─ sample_data.csv
-└─ src/
-   ├─ Health_AI_Agent/
-   │  ├─ app/
-   │  │  ├─ main.py
-   │  │  └─ config.py
-   │  ├─ agents/
-   │  │  ├─ orchestrator.py
-   │  │  ├─ sql_agent.py
-   │  │  ├─ rag_agent.py
-   │  │  ├─ qa_agent.py
-   │  │  ├─ analyst_agent.py
-   │  │  └─ report_agent.py
-   │  ├─ db/
-   │  │  ├─ bigquery_client.py
-   │  │  └─ pgvector_client.py
-   │  ├─ ingestion/
-   │  │  ├─ ingest_docs.py
-   │  │  ├─ embed_store.py
-   │  │  └─ chunking.py
-   │  ├─ Dockerfile
-   │  └─ requirements.txt
-   └─ ML/
-      ├─ data_preprocessing.py
-      ├─ feature_engineering.py
-      ├─ train_model.py
-      ├─ hyperparameter_tuning.py
-      ├─ register_vertex_model.py
-      └─ predict.py
+src/Health_AI_Agent/
+├─ app/
+│  ├─ main.py
+│  └─ config.py
+├─ agents/
+│  ├─ orchestrator.py
+│  ├─ sql_agent.py
+│  ├─ rag_agent.py
+│  ├─ qa_agent.py
+│  ├─ analyst_agent.py
+│  └─ report_agent.py
+├─ db/
+│  ├─ bigquery_client.py
+│  └─ pgvector_client.py
+├─ ingestion/
+│  ├─ ingest_docs.py
+│  ├─ embed_store.py
+│  └─ chunking.py
+├─ Dockerfile
+└─ requirements.txt
 ```
 
-## Engineering Highlights
+## 2. MLOps Architecture
 
-- Designed a modular multi-agent architecture for enterprise healthcare analytics.
-- Implemented a RAG-first workflow to ground SQL and reporting in enterprise context.
-- Built a scalable BigQuery embedding pipeline for 50M clinical records.
-- Used deterministic sharding to distribute embedding workloads across 500 workers.
-- Added Clinical Transformer embedding logic with 256-dimensional output vectors.
-- Integrated BigQuery for analytical execution and embedding storage.
-- Integrated pgvector as the semantic retrieval layer.
-- Added SQL validation guardrails before query execution.
-- Included MLOps scripts for model training, tuning, serialization, and Vertex AI registration.
-- Structured the project for cloud-native API deployment with FastAPI and Docker.
+### MLOps Overview
 
-## AI-Assisted Engineering Workflow
+The repository includes an MLOps-ready machine learning pipeline for predictive modeling. This part of the system supports model development, tuning, serialization, registry integration, and future deployment for healthcare risk-scoring and classification use cases.
+
+The MLOps architecture is designed to support the full model lifecycle:
+
+- Data ingestion
+- Data validation
+- Feature engineering
+- Model training
+- Hyperparameter tuning
+- Model evaluation
+- Model serialization
+- Vertex AI model registration
+- Batch or online inference
+- Monitoring and retraining
+
+### MLOps Lifecycle
+
+```text
+Data Source
+  -> Data Validation
+  -> Feature Engineering
+  -> Train/Test Split
+  -> Model Training
+  -> Hyperparameter Tuning
+  -> Model Evaluation
+  -> Model Serialization
+  -> Vertex AI Model Registry
+  -> Deployment / Batch Inference
+  -> Monitoring and Retraining
+```
+
+### Model Training Architecture
+
+```text
+Raw Data
+  -> Feature Engineering
+  -> XGBoost Training
+  -> Grid Search Tuning
+  -> Accuracy Evaluation
+  -> Save Best Model
+  -> Register Model in Vertex AI
+```
+
+The current training pipeline includes:
+
+- CSV-based data ingestion
+- Reusable preprocessing functions
+- Derived feature creation
+- Train/test split
+- XGBoost model training
+- Grid search hyperparameter tuning
+- Accuracy evaluation
+- `.pkl` model serialization
+- Vertex AI model upload
+- Local prediction script
+
+### Model Components
+
+| Component | File | Purpose |
+| --- | --- | --- |
+| Data preprocessing | `src/ML/data_preprocessing.py` | Loads source data and creates train/test splits. |
+| Feature engineering | `src/ML/feature_engineering.py` | Creates derived features, validates dates, checks nulls, and handles categorical columns. |
+| Training | `src/ML/train_model.py` | Trains the baseline XGBoost classifier. |
+| Hyperparameter tuning | `src/ML/hyperparameter_tuning.py` | Runs grid search and saves the best model. |
+| Model registration | `src/ML/register_vertex_model.py` | Uploads the trained model artifact to Vertex AI. |
+| Prediction | `src/ML/predict.py` | Loads the saved model and runs local inference. |
+
+### Vertex AI Registry Pattern
+
+Vertex AI is used as the model registry layer for production MLOps.
+
+Registry responsibilities:
+
+- Store versioned model artifacts
+- Track deployable models
+- Support controlled promotion from experiment to production
+- Enable downstream deployment to managed serving or batch inference
+- Provide a foundation for model governance and auditability
+
+### Production MLOps Design
+
+For production readiness, the model lifecycle should include:
+
+- Automated training pipeline execution
+- Dataset versioning
+- Feature validation
+- Model evaluation gates
+- Model registry approval workflow
+- Batch inference scheduling
+- Model drift monitoring
+- Performance monitoring
+- Retraining triggers
+- CI/CD for model code and deployment artifacts
+
+### AI-Assisted Engineering Workflow
 
 As the AI Architect / Engineer, I used Claude as an AI coding assistant to accelerate Python code generation, boilerplate creation, and implementation iteration. The architecture, component design, scaling strategy, cloud patterns, validation approach, and final integration decisions are owned and reviewed from an engineering perspective.
 
-This reflects a modern AI engineering workflow where generative AI is used to improve development velocity while the architect remains responsible for:
+This reflects a modern AI engineering workflow where generative AI improves development velocity while the architect remains responsible for:
 
 - System architecture and component boundaries
 - Cloud scaling strategy
@@ -570,7 +516,7 @@ This reflects a modern AI engineering workflow where generative AI is used to im
 - MLOps lifecycle design
 - Production-readiness decisions
 
-## Technology Stack
+### Technology Stack
 
 - Python
 - FastAPI
@@ -587,7 +533,47 @@ This reflects a modern AI engineering workflow where generative AI is used to im
 - Vertex AI
 - Docker
 
-## Future Enhancements
+### Repository Structure
+
+```text
+enterprise-ai-data-agent-main/
+├─ README.md
+├─ requirements.txt
+├─ config/
+│  └─ model_config.yaml
+├─ data/
+│  └─ sample_data.csv
+└─ src/
+   ├─ Health_AI_Agent/
+   │  ├─ app/
+   │  ├─ agents/
+   │  ├─ db/
+   │  └─ ingestion/
+   └─ ML/
+      ├─ data_preprocessing.py
+      ├─ feature_engineering.py
+      ├─ train_model.py
+      ├─ hyperparameter_tuning.py
+      ├─ register_vertex_model.py
+      └─ predict.py
+```
+
+### Engineering Highlights
+
+- Designed a modular multi-agent architecture for enterprise healthcare analytics.
+- Implemented a RAG-first workflow to ground SQL and reporting in enterprise context.
+- Added semantic chunking based on topic shifts and cosine similarity.
+- Built a scalable BigQuery embedding pipeline for 50M clinical records.
+- Designed dynamic `n1-standard-16` worker scaling based on input record volume.
+- Used deterministic sharding to distribute embedding workloads across workers.
+- Added Clinical Transformer embedding logic with 256-dimensional output vectors.
+- Integrated BigQuery for analytical execution and embedding storage.
+- Integrated pgvector as the semantic retrieval layer.
+- Added SQL validation guardrails before query execution.
+- Included MLOps scripts for model training, tuning, serialization, and Vertex AI registration.
+- Structured the project for cloud-native API deployment with FastAPI and Docker.
+
+### Future Enhancements
 
 - Add CI/CD workflow for tests, linting, Docker build, and deployment.
 - Add automated evaluation for SQL correctness and answer quality.
@@ -597,7 +583,3 @@ This reflects a modern AI engineering workflow where generative AI is used to im
 - Add model drift monitoring and scheduled retraining.
 - Add Terraform infrastructure for repeatable GCP deployment.
 - Add batch orchestration using Cloud Batch, Vertex AI Pipelines, or GKE jobs.
-
-## Summary
-
-This repository demonstrates an AI Architect / Engineer implementation of an enterprise healthcare AI data agent. It combines multi-agent orchestration, RAG, clinical transformer embeddings, BigQuery-scale data processing, pgvector semantic retrieval, and an MLOps model lifecycle into a single extensible platform.
