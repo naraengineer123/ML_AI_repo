@@ -224,6 +224,49 @@ SQL Generation + Report Generation
 - Clinical Transformer embeddings represent clinical text in vector form.
 - Retrieved context is injected into agent prompts to ground SQL and reporting.
 
+### Semantic Chunking Strategy
+
+The RAG ingestion pipeline uses semantic chunking instead of splitting documents by a fixed number of words or tokens.
+
+With semantic chunking, clinical notes are split when the topic changes. This keeps related sentences together and prevents unrelated medical concepts from being embedded into the same vector.
+
+Example source note:
+
+```text
+Member called regarding diabetes medication refill.
+Agent explained insulin dosage instructions.
+Member asked about cardiology appointment next week.
+```
+
+Semantic chunks:
+
+```text
+Chunk 1:
+Member called regarding diabetes medication refill.
+Agent explained insulin dosage instructions.
+
+Chunk 2:
+Member asked about cardiology appointment next week.
+```
+
+The chunking logic embeds each sentence and compares adjacent sentence embeddings using cosine similarity. If similarity drops below the configured threshold, a new chunk is created.
+
+```text
+sentence_embeddings = embed(sentences)
+current_chunk = [sentences[0]]
+
+for i in range(1, len(sentences)):
+    sim = cosine_similarity(sentence_embeddings[i - 1], sentence_embeddings[i])
+
+    if sim < similarity_threshold:
+        chunks.append(current_chunk)
+        current_chunk = [sentences[i]]
+    else:
+        current_chunk.append(sentences[i])
+```
+
+This improves retrieval quality for care-management use cases because diabetes, medication adherence, cardiology, hospitalization risk, and other clinical topics can be retrieved as focused chunks instead of mixed-context passages.
+
 ## Clinical Transformer Embedding Pipeline
 
 I added a distributed embedding pipeline that reads source records from BigQuery, generates clinical embeddings, and loads final embeddings back into BigQuery.
@@ -270,6 +313,7 @@ Each dynamically created worker receives a unique `shard_index`. For the 50M-rec
 ```text
 Worker Shard
   -> Read 100k records from BigQuery
+  -> Apply semantic chunking by clinical topic
   -> Process records in batches of 2,000
   -> Tokenize clinical text
   -> Run Clinical Transformer model
