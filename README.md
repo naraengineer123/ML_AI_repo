@@ -1,238 +1,255 @@
+# Enterprise AI Data Agent
+
+This repository is divided into two major sections:
 
-**Project Summary**
+1. Build AI Agent for Care Managers
+2. ML/AI Model Training Repository
+
+## 1. Build AI Agent for Care Managers
 
-  - This project implements a Multi-Agent AI Platform for Natural Language Data Querying across 10,000+ enterprise tables. The system allows business users, analysts, and healthcare teams to interact with large-scale enterprise data using natural language instead of complex SQL queries.
-  
-  - Traditional enterprise data environments contain thousands of tables distributed across multiple datasets, making it difficult for non-technical users to locate the correct tables, understand schema relationships, and generate accurate queries. This platform addresses that challenge by combining AI agents, Retrieval Augmented Generation (RAG), and automated SQL generation to provide an intelligent interface for enterprise analytics.
-  
-  - The system uses a cooperative multi-agent architecture where specialized agents perform different tasks such as policy validation, SQL generation, result verification, data analysis, and report generation. These agents work together to transform user questions into structured data queries, retrieve relevant information, validate the results, and produce actionable insights.
+This section implements a multi-agent AI platform for care managers, healthcare analysts, and business users who need to query enterprise healthcare data using natural language.
 
-  - The platform is deployed as a cloud-native application using a FastAPI service and runs in a scalable serverless environment.
+The system reads data from source BigQuery tables, generates clinical embeddings, stores retrieval-ready vectors, and uses a multi-RAG agent architecture to answer care-management questions.
 
-**Why We Built This System**
+Example care-manager questions:
 
-  - Large enterprise organizations often manage massive data ecosystems with thousands of tables and complex schemas. Accessing and interpreting this data typically requires:
-      - knowledge of database schema
-      - strong SQL expertise
-      - familiarity with multiple data sources
-      - manual analysis workflows
+- Which members have diabetes risk?
+- Show members with high cardiovascular risk.
+- Identify members with multiple chronic conditions.
+- Which members have hospitalization risk greater than 0.7?
+- Which members should be prioritized for care management outreach?
+
+### Core Capabilities
+
+- Natural language querying across enterprise healthcare data
+- Source data ingestion from BigQuery
+- Transformer embedding generation for clinical text
+- 256-dimensional clinical embeddings
+- Distributed batch embedding across GCP compute instances
+- Final embedding output loaded into BigQuery
+- Multi-RAG architecture for retrieval and response generation
+- pgvector support for vector search and policy/context retrieval
+- SQL generation, validation, analysis, and report generation agents
 
-This creates several challenges:
+### Multi-Agent Architecture
 
-1. Data Accessibility
+The care-manager AI agent is implemented as a cooperative multi-agent system.
 
-Business users cannot easily access data because they lack technical SQL skills. Analysts and data engineers become bottlenecks for answering simple questions.
+Agents:
 
-2. Schema Complexity
+- SQL Agent: Converts natural language questions into BigQuery SQL.
+- RAG Agent: Retrieves relevant context using embeddings and vector search.
+- QA Agent: Validates generated SQL and checks for unsafe operations.
+- Analyst Agent: Converts raw query results into concise insights.
+- Report Agent: Generates final care-manager-facing summaries and recommendations.
+- Orchestrator: Coordinates the end-to-end flow across all agents.
 
-With 10,000+ tables, identifying the correct tables and relationships becomes difficult even for experienced engineers.
+High-level request flow:
 
-3. Knowledge Fragmentation
+```text
+Care Manager Question
+  -> FastAPI Query Endpoint
+  -> Agent Orchestrator
+  -> RAG Context Retrieval
+  -> SQL Generation
+  -> SQL Validation
+  -> BigQuery Execution
+  -> Result Analysis
+  -> Final Report
+```
 
-Important documentation such as data dictionaries, governance policies, and metadata are often stored separately in portals or documents.
+### RAG and Vector Architecture
 
-4. Compliance and Governance
+The platform implements a multi-RAG architecture using:
 
-In regulated environments such as healthcare, data access must comply with strict governance rules. Queries must respect policies and avoid exposing restricted information.
+- BigQuery for enterprise source data and final embedding storage
+- pgvector for vector similarity search
+- Clinical Transformer embeddings for healthcare text
+- Retrieved policy, metadata, schema, and clinical context
+- LLM-based SQL and report generation
 
-5. Slow Analytics Workflow
+RAG flow:
 
-Traditional data workflows involve multiple steps:
+```text
+Source Documents / Clinical Text
+  -> Clinical Transformer Embedding
+  -> 256-D Vector
+  -> BigQuery Embedding Table
+  -> pgvector Retrieval Layer
+  -> Agent Context
+  -> SQL / Analysis / Report Output
+```
 
-User → Analyst → SQL query → Validation → Report
+### BigQuery Clinical Embedding Pipeline
 
-This slows down decision making.
+The ingestion pipeline reads records from a source BigQuery table, applies a Flash Attention-based Clinical Transformer model, creates 256-dimensional embeddings, and loads the final embedded records back into BigQuery.
 
-**Solution Approach**
+Target design:
 
-  This system solves the problem by introducing a multi-agent AI architecture where each agent specializes in a specific task:
+| Item | Value |
+| --- | --- |
+| Input data volume | 50M records |
+| Source | BigQuery source table |
+| Model | Flash Attention-based Clinical Transformer model |
+| Embedding size | 256 dimensions |
+| GCP instance type | n1-standard-16 |
+| Records per instance | 100,000 |
+| Total instances | 500 |
+| Batch size | 2,000 |
+| Final destination | BigQuery embedding table |
+| Vector retrieval | pgvector |
 
-- SQL Agent converts natural language into optimized SQL queries
-- RAG Policy Agent retrieves governance rules and documentation
-- QA Agent validates query results and prevents hallucinations
-- Analyst Agent transforms raw data into insights
-- Report/Action Agent generates final responses and recommendations
+Each instance runs one shard of the embedding job. With 50M records and 100k records per instance, the full job spins up 500 workers.
 
-  By coordinating these agents, the system can automatically:
+```text
+50,000,000 records / 100,000 records per instance = 500 instances
+```
 
-- interpret natural language questions
-- locate relevant datasets
-- generate and execute SQL queries
-- validate the results
-- produce business insights
+### Embedding Worker Configuration
 
-**Key Benefits**
-- Natural Language Data Access
-  : Users can ask questions directly instead of writing SQL queries.
+Set these environment variables before running an embedding worker:
 
-- Scalable Data Discovery
-  : The platform can operate across thousands of enterprise tables.
+```bash
+export BQ_SOURCE_TABLE="project.dataset.source_table"
+export BQ_DEST_TABLE="project.dataset.clinical_embeddings"
+export BQ_ID_COLUMN="member_id"
+export BQ_TEXT_COLUMNS="diagnosis_text,clinical_notes"
+export EMBEDDING_MODEL_NAME="emilyalsentzer/Bio_ClinicalBERT"
+export EMBEDDING_TOTAL_SHARDS=500
+export EMBEDDING_RECORDS_PER_INSTANCE=100000
+export EMBEDDING_BATCH_SIZE=2000
+export EMBEDDING_DIMENSION=256
+```
 
-- Governance and Compliance
+Run one worker shard:
 
-Policy-aware retrieval ensures data usage follows governance rules.
+```bash
+cd src/Health_AI_Agent
+python -m ingestion.ingest_docs --shard-index 0
+```
 
-Faster Decision Making
+For the full workload, launch shard indexes `0` through `499` across 500 GCP `n1-standard-16` instances.
 
-Automates complex analytics workflows and reduces reliance on manual data analysis.
+### Care Agent API
 
-Intelligent Data Insights
+The FastAPI service exposes the AI agent interface.
 
-Provides summarized results, trends, and actionable recommendations.
+Run locally:
 
-Target Use Cases
-
-This system is designed for enterprise environments such as:
-
-healthcare analytics
-
-insurance risk analysis
-
-population health management
-
-customer analytics
-
-operational intelligence
-
-Example Queries
-
-Users can ask questions such as:
-
-Which members have diabetes risk?
-
-Show members with high cardiovascular risk.
-
-Identify members with multiple chronic conditions.
-
-Which members have hospitalization risk greater than 0.7?
-
-The platform automatically translates these questions into structured queries and provides validated insights.
-
-Multi-Agent AI System for Enterprise Data Query
-AI-powered platform that enables natural language querying of 10,000+ enterprise tables using a multi-agent architecture, RAG pipelines, and SQL automation.
-
-The system allows business users to ask questions such as:
-
-  Which members have diabetes risk?
-  Show members with high cardiovascular risk.
-  Members with hospitalization risk above threshold.
-  Members with chronic disease indicators.
-  
-The platform automatically translates these questions into SQL queries, policy-aware retrieval, analytics, and reports.
-
-
-<img width="1677" height="598" alt="image" src="https://github.com/user-attachments/assets/c099b9e9-ea1a-4a1f-91c0-b7edad5b9af9" />
-
-
-
-System Components
-FastAPI Application Layer
-  The system exposes APIs using FastAPI to allow users or applications to interact with the AI platform.
-
-Responsibilities:
-  Accept user questions
-  Send requests to agent orchestrator
-  Return structured responses
-  Provide REST endpoints
-
-Multi-Agent Architecture
-
-The system uses specialized AI agents working together to process queries.
-
-1. SQL / BigQuery Agent
-
-Responsible for:
-
-  Translating natural language questions into SQL
-  Discovering relevant tables among 10,000+ datasets
-  Executing queries on the enterprise data warehouse
-  Optimizing joins and filters
-
-Example question:
-Which members have diabetes risk?
-
-
-2. RAG Policy Agent
-Ensures compliance and governance.
-  Responsibilities:
-  Retrieve policy documents
-  Validate query permissions
-  Mask restricted healthcare data
-  Provide contextual knowledge
-
-The agent uses Retrieval Augmented Generation (RAG) to access policy and metadata knowledge.
-
-3. QA Agent
-Ensures correctness of generated responses.
-Capabilities:
-  Detect hallucinations
-  Verify query results
-  Cross-check policy compliance
-  Validate SQL outputs
-
-4. Analyst Agent
-Transforms raw data into meaningful insights.
-
-Responsibilities:
-  Risk analysis
-  Member segmentation
-  Trend detection
-  Health outcome analysis
-
-Example output:
-
-Diabetes Risk Summary
----------------------
-  High Risk Members: 1,245
-  Moderate Risk: 3,980
-  Low Risk: 12,421
-
-
-5. Report / Action Agent
-Responsible for generating final responses and triggering actions.
-
-Outputs:
-  Summaries
-  Reports
-  Dashboards
-  Alerts
-  Care management triggers
-
-
-
-
-# ML/AI Model Training Repository
-
-Reusable machine learning pipeline including:
-
-• Feature Engineering
-• XGBoost Model Training
-• Hyperparameter Tuning
-• Model Serialization (.pkl)
-• Vertex AI Model Registry
-• Reusable pipeline for multiple datasets
-
-## Pipeline
-
-Raw Data → Feature Engineering → Train/Test Split → Model Training → Hyperparameter Tuning → Model Save → Vertex AI Registration
-
-## Setup
-
+```bash
+cd src/Health_AI_Agent
 pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
 
-## Train Model
+Health check:
 
-python src/train_model.py
+```bash
+GET /
+```
 
-## Hyperparameter Tuning
+Query endpoint:
 
-python src/hyperparameter_tuning.py
+```bash
+POST /query
+```
 
-## Register Model in Vertex AI
+Example request:
 
-python src/register_vertex_model.py
+```json
+{
+  "question": "Which members have diabetes risk?"
+}
+```
 
-## Run Predictions
+### Main Care Agent Files
 
-python src/predict.py# ML_AI_repo
-# ML_AI_repo
+```text
+src/Health_AI_Agent/
+├─ app/
+│  ├─ main.py
+│  └─ config.py
+├─ agents/
+│  ├─ orchestrator.py
+│  ├─ sql_agent.py
+│  ├─ rag_agent.py
+│  ├─ qa_agent.py
+│  ├─ analyst_agent.py
+│  └─ report_agent.py
+├─ db/
+│  ├─ bigquery_client.py
+│  └─ pgvector_client.py
+└─ ingestion/
+   ├─ ingest_docs.py
+   ├─ chunking.py
+   └─ embed_store.py
+```
+
+## 2. ML/AI Model Training Repository
+
+This section contains a reusable machine learning pipeline for training and registering predictive models.
+
+Included capabilities:
+
+- Data loading from CSV
+- Feature engineering
+- Train/test split
+- XGBoost model training
+- Hyperparameter tuning
+- Model serialization with `.pkl`
+- Vertex AI model registration
+- Prediction script for local inference
+
+### ML Pipeline
+
+```text
+Raw Data
+  -> Feature Engineering
+  -> Train/Test Split
+  -> XGBoost Model Training
+  -> Hyperparameter Tuning
+  -> Model Save
+  -> Vertex AI Registration
+```
+
+### Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+### Train Model
+
+```bash
+python src/ML/train_model.py
+```
+
+### Hyperparameter Tuning
+
+```bash
+python src/ML/hyperparameter_tuning.py
+```
+
+### Register Model in Vertex AI
+
+```bash
+python src/ML/register_vertex_model.py
+```
+
+### Run Predictions
+
+```bash
+python src/ML/predict.py
+```
+
+### Main ML Files
+
+```text
+src/ML/
+├─ data_preprocessing.py
+├─ feature_engineering.py
+├─ train_model.py
+├─ hyperparameter_tuning.py
+├─ register_vertex_model.py
+└─ predict.py
+```
